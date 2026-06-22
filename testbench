@@ -1,0 +1,39 @@
+`timescale 1ns / 1ps
+module uart_sim;
+    parameter clk_per_bit = 8;
+    reg clk; reg rst;
+    reg tx_start; reg[7:0] tx_data;
+    wire tx_done; wire tx_line;
+    wire [7:0] rx_data; wire rx_done;
+    //Transmitter Instantiation
+    uart_tx #(.clk_per_bit(clk_per_bit)) tx(.clk(clk),.rst(rst),
+    .tx(tx_line),.tx_start(tx_start),.tx_data(tx_data),.tx_done(tx_done));
+    //Receiver Instantiation
+    uart_rx #(.clk_per_bit(clk_per_bit)) rx(.clk(clk),.rst(rst),
+    .rx(tx_line),.rx_data(rx_data),.rx_done(rx_done));
+    initial begin
+        clk = 0;
+        forever #5 clk = ~clk;
+    end
+    initial begin
+        rst = 1;
+        tx_start = 0;
+        tx_data = 8'h00;
+        #20;
+        rst = 0;
+        //Send data
+        @(posedge clk)
+        tx_data = 8'h37;
+        tx_start = 1;
+        @(posedge clk)
+        tx_start = 0;
+        //Wait for receiver
+        wait(rx_done);
+        if(rx_data == tx_data)
+            $display("TEST PASSED: tx = %0h, rx = %0h", tx_data, rx_data);
+        else
+            $display("TEST FAILED: tx = %0h, rx = %0h", tx_data, rx_data);
+        #50;
+        $finish;
+    end
+endmodule
